@@ -1,0 +1,158 @@
+#include <SFML/Graphics.hpp>
+#include <iostream>
+#include <SFML/Audio.hpp>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <ctime>
+#include <string>
+#include <random>
+#include <iomanip>
+#include <vector>
+
+using namespace std;
+using namespace sf;
+int pagenum = 1000;
+class Menu{
+public:
+    Text mainmenu[4];
+    Menu(float width , float height);
+    void draw(RenderWindow& window);
+    void MoveUP();
+    void MoveDown();
+    void setSelected(int n);
+    int pressed(){
+        return selected;
+    }
+
+private:
+    int selected;
+    Font font;
+
+
+
+};
+Menu::Menu(float width, float height){
+    font.loadFromFile("../Downloads/Super-Mario-Bros--3.ttf");
+
+    mainmenu[0].setFont(font);
+    mainmenu[0].setFillColor(Color::White);
+    mainmenu[0].setString("Nombre de Juego");
+    mainmenu[0].setCharacterSize(120);
+    mainmenu[0].setPosition(Vector2f(width / 8, height / (4)));
+
+    mainmenu[1].setFont(font);
+    mainmenu[1].setFillColor(Color::White);
+    mainmenu[1].setString("Jugar");
+    mainmenu[1].setCharacterSize(90);
+    mainmenu[1].setPosition(Vector2f(width / 8, height / (4) + 200));
+    
+    mainmenu[2].setFont(font);
+    mainmenu[2].setFillColor(Color::White);
+    mainmenu[2].setString("Instrucciones");
+    mainmenu[2].setCharacterSize(90);
+    mainmenu[2].setPosition(Vector2f(width / 8, height / (4) + 400));
+
+    mainmenu[3].setFont(font);
+    mainmenu[3].setFillColor(Color::White);
+    mainmenu[3].setString("Salir");
+    mainmenu[3].setCharacterSize(90);
+    mainmenu[3].setPosition(Vector2f(width / 8, height / (4) + 600));
+
+    selected = 1;
+
+}
+
+
+void Menu::setSelected(int n){
+    selected = n;
+}
+
+void Menu::draw(RenderWindow& window){
+    for(int i = 0; i < 4; i++){
+        window.draw(mainmenu[i]);
+    }
+}
+
+void Menu::MoveDown(){
+    if(selected + 1 <= 4)
+    {
+        mainmenu[selected].setFillColor(Color::White);
+        selected++;
+        if(selected == 4){
+            selected = 1;
+        }
+        mainmenu[selected].setFillColor(Color::Blue);
+
+    }
+}
+
+void Menu::MoveUP(){
+    if(selected - 1 >= 1)
+    {
+        mainmenu[selected].setFillColor(Color::White);
+        selected--;
+        if(selected == -1){
+            selected = 2;
+        }
+        mainmenu[selected].setFillColor(Color::Blue);
+        
+    }
+}
+int main(){
+    RenderWindow window(VideoMode(1920, 1080), "Juego");
+    Menu menu(1920, 1080);
+    Texture mainmenubg;
+    mainmenubg.loadFromFile("../Downloads/descarga (2).jpg");
+    Sprite bg;
+    bg.setTexture(mainmenubg);
+
+    while(true) {
+        if(pagenum == 1000){
+            while (window.isOpen()){
+            Event event;
+            while(window.pollEvent(event)){
+                if(event.type == Event::Closed){
+                    window.close();
+                    break;
+                }
+                if (event.type == Event::KeyPressed){
+                    if(event.key.code == Keyboard:: Up){
+                        menu.MoveUP();
+                    }
+                    if(event.key.code == Keyboard::Down){
+                        menu.MoveDown();
+                    }
+                    if (event.key.code == Keyboard::Return){
+                        if(menu.pressed()==0){
+                            pagenum = 0;
+                        }
+                        if(menu.pressed() == 1){
+                            pagenum = 1;
+                        }
+                        if(menu.pressed() == 3){
+                            pagenum = -1;
+                        }
+                    }
+                }
+            }
+            window.clear();
+            if(pagenum != 1000){
+                break;
+            }
+            window.draw(bg);
+            menu.draw(window);
+            window.display();
+        }
+        if(pagenum == -1){
+            window.close();
+            break;
+        }
+        if(pagenum == 0){
+            //pname;
+        }
+        }
+    }
+
+}
