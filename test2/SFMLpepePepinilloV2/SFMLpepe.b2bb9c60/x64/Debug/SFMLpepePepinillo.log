@@ -1,0 +1,4 @@
+﻿  SFMLTemplate.cpp
+C:\Users\ivan_\Desktop\CETYS\SegundoSemestre\ProgramacionOrientadaObjetos\proyectoFinal\SFMLpepePepinilloV2\SFMLTemplate.cpp(244,44): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+C:\Users\ivan_\Desktop\CETYS\SegundoSemestre\ProgramacionOrientadaObjetos\proyectoFinal\SFMLpepePepinilloV2\SFMLTemplate.cpp(244,36): warning C4244: 'argument': conversion from 'float' to 'unsigned int', possible loss of data
+  SFMLpepePepinillo.vcxproj -> C:\Users\ivan_\Desktop\CETYS\SegundoSemestre\ProgramacionOrientadaObjetos\proyectoFinal\SFMLpepePepinilloV2\x64\Debug\SFMLpepePepinillo.exe
