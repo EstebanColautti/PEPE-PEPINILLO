@@ -391,15 +391,15 @@ public:
             }
 
             float bloquePosX = i * bloqueWidth;
-            Bloque bloque("C:/PepePepinillo/PUTAMADRE.bmp", bloquePosX, floorHeight, false);
+            Bloque bloque("C:/PepePepinillo/bloque.bmp", bloquePosX, floorHeight, false);
             bloques.push_back(bloque);
             cout << "Cantidad de bloques= " << i << endl;
         }
         // Agregar un bloque en el aire
-        Bloque bloqueEnAire("C:/PepePepinillo/PUTAMADRE.bmp", 250.0f, 280.0f, false);
+        Bloque bloqueEnAire("C:/PepePepinillo/bloque.bmp", 250.0f, 280.0f, false);
         bloques.push_back(bloqueEnAire);
 
-        Bloque bloqueEnAire2("C:/PepePepinillo/PUTAMADRE.bmp", 318.0f, 212.0f, false);
+        Bloque bloqueEnAire2("C:/PepePepinillo/bloque.bmp", 318.0f, 212.0f, false);
         bloques.push_back(bloqueEnAire2);
 
         // Crear un rectángulo
@@ -413,7 +413,7 @@ public:
         int numEscalones = 5;
 
         for (int i = 0; i < numEscalones; i++) {
-            Bloque bloqueEscalera("C:/PepePepinillo/PUTAMADRE.bmp", posicionEscaleraX, posicionEscaleraY, false);
+            Bloque bloqueEscalera("C:/PepePepinillo/bloque.bmp", posicionEscaleraX, posicionEscaleraY, false);
             bloques.push_back(bloqueEscalera);
 
             // Actualizar la posición para el siguiente escalón
@@ -494,7 +494,7 @@ public:
         }
 
         sf::Texture bloqueTexture;
-        if (!bloqueTexture.loadFromFile("C:/PepePepinillo/PUTAMADRE.bmp")) {
+        if (!bloqueTexture.loadFromFile("C:/PepePepinillo/bloque.bmp")) {
             std::cerr << "Error cargando la textura del enemigo" << std::endl;
             exit(1);
         }
