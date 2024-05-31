@@ -19,22 +19,24 @@
 using namespace std;
 using namespace sf;
 
+// Variables globales
 int numPagina = 1000;
 int nivelActual = 1;  // Variable para rastrear el nivel actual
 
+// Clase que manejaba las mecánicas del juego
 class Mecanicas {
 private:
     float velocidad = 200.0f; // Velocidad caminando
     float velocidadY = 0.f;
     float velocidadSalto = 400.0f; // Velocidad de salto
     float gravedad = 980.0f; // Gravedad
-    float aceleracion = 2000.0f; // Aceleraci�n reducida
-    float friccion = 2000.0f; // Fricci�n reducida
-    bool saltando = false;
+    float aceleracion = 2000.0f; // Aceleración reducida
+    float friccion = 2000.0f; // Fricción reducida
+    bool saltando = false; // Indicador de salto
 
 public:
-    bool debajoDeBloque = false;
-    float velocidadX = 0.0f;
+    bool debajoDeBloque = false; // Indicador de colisión con bloque superior
+    float velocidadX = 0.0f; // Velocidad horizontal
 
     float obtenerVelocidadY() const {
         return velocidadY;
@@ -46,9 +48,11 @@ public:
 
     Mecanicas(float gravedad) : gravedad(gravedad) {}
 
+    // Método que creamos para controlar el movimiento básico del personaje
     void movimientoBasico(sf::Sprite& sprite, float deltaTime) {
         int direccionDeseada = 0;
 
+        // Detectamos si se está presionando una tecla para moverse a la izquierda o derecha
         if (sf::Keyboard::isKeyPressed(sf::Keyboard::A) || sf::Keyboard::isKeyPressed(sf::Keyboard::Left)) {
             direccionDeseada = -1;
         }
@@ -56,12 +60,14 @@ public:
             direccionDeseada = 1;
         }
 
+        // Aceleramos el movimiento en la dirección deseada
         if (direccionDeseada != 0) {
             velocidadX += direccionDeseada * aceleracion * deltaTime;
             if (velocidadX > velocidad) velocidadX = velocidad;
             if (velocidadX < -velocidad) velocidadX = -velocidad;
         }
         else {
+            // Aplicamos fricción si no se está moviendo
             if (velocidadX > 0) {
                 velocidadX -= friccion * deltaTime;
                 if (velocidadX < 0) velocidadX = 0;
@@ -72,13 +78,16 @@ public:
             }
         }
 
+        // Movemos el sprite horizontalmente
         sprite.move(velocidadX * deltaTime, 0.f);
 
+        // Detectamos si se está presionando la tecla para saltar
         if ((sf::Keyboard::isKeyPressed(sf::Keyboard::W) || sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) && !saltando) {
             saltar();
             saltando = true;
         }
 
+        // Aplicamos gravedad si no estamos debajo de un bloque
         if (!debajoDeBloque) {
             velocidadY += gravedad * deltaTime;
         }
@@ -86,47 +95,56 @@ public:
             velocidadY = 0.f;
         }
 
+        // Movemos el sprite verticalmente
         sprite.move(0.f, velocidadY * deltaTime);
     }
 
+    // Método para resetear la velocidad vertical
     void resetearVelocidadY() {
         velocidadY = 0.0f;
     }
 
+    // Método para realizar el salto
     void saltar() {
         velocidadY = -velocidadSalto;
     }
 
+    // Método para establecer si el personaje está saltando
     void setSaltando(bool value) {
         saltando = value;
     }
 };
 
+// Clase base para todos los objetos en el juego
 class Objeto {
 public:
     sf::Sprite sprite;
     std::unique_ptr<Mecanicas> mecanicas;
     bool movible;
 
+    // Constructor de la clase Objeto
     Objeto(const std::string& rutaImagen, std::unique_ptr<Mecanicas> movimientos, bool movible, AdministradorDeTexturas& administradorDeTexturas)
         : mecanicas(std::move(movimientos)), movible(movible) {
         sprite.setTexture(*administradorDeTexturas.obtenerTextura(rutaImagen));
     }
 
+    // Constructor alternativo de la clase Objeto
     Objeto(sf::Texture& textura, std::unique_ptr<Mecanicas> movimientos, bool movible)
         : mecanicas(std::move(movimientos)), movible(movible) {
         sprite.setTexture(textura);
     }
 
+    // Método para ejecutar el movimiento del objeto
     virtual void ejecutarMovimiento(sf::RenderWindow& ventana, float deltaTime) {
         if (movible && mecanicas != nullptr) {
             mecanicas->movimientoBasico(sprite, deltaTime);
 
             sf::Vector2u tamanoVentana = ventana.getSize();
 
+            // Evitamos que el sprite se salga de los límites de la ventana
             if (sprite.getPosition().x < 0)
                 sprite.setPosition(0, sprite.getPosition().y);
-            else if (sprite.getPosition().x + sprite.getGlobalBounds().width > tamanoVentana.x * 3) // Ajustar tamano de ventana
+            else if (sprite.getPosition().x + sprite.getGlobalBounds().width > tamanoVentana.x * 3) // Ajustamos el tamaño de la ventana
                 sprite.setPosition(tamanoVentana.x * 3 - sprite.getGlobalBounds().width, sprite.getPosition().y);
 
             if (sprite.getPosition().y < 0)
@@ -136,28 +154,33 @@ public:
         }
     }
 
+    // Método para dibujar el objeto en la ventana
     virtual void dibujar(sf::RenderWindow& ventana) {
         ventana.draw(sprite);
     }
 };
 
-// Declaraci�n adelantada de la clase Boss
+// Declaración adelantada de la clase Boss
 class Boss;
 
+// Clase Personaje que hereda de Objeto
 class Personaje : public Objeto {
 public:
-    bool enElSuelo;
+    bool enElSuelo; // Indicador de si el personaje está en el suelo
 
+    // Constructor de la clase Personaje
     Personaje(const std::string& rutaImagen, std::unique_ptr<Mecanicas> movimientos, bool movible, AdministradorDeTexturas& administradorDeTexturas)
         : Objeto(rutaImagen, std::move(movimientos), movible, administradorDeTexturas), enElSuelo(false) {
         sprite.setPosition(50.f, 350.f);
     }
 
+    // Constructor alternativo de la clase Personaje
     Personaje(sf::Texture& textura, std::unique_ptr<Mecanicas> movimientos, bool movible)
         : Objeto(textura, std::move(movimientos), movible), enElSuelo(false) {
         sprite.setPosition(50.f, 350.f);
     }
 
+    // Método para establecer si el personaje está en el suelo
     void setEnElSuelo(bool value) {
         enElSuelo = value;
         if (value) {
@@ -166,14 +189,16 @@ public:
         }
     }
 
+    // Método para ejecutar el movimiento del personaje
     void ejecutarMovimiento(sf::RenderWindow& ventana, float deltaTime) override {
         mecanicas->movimientoBasico(sprite, deltaTime);
 
         sf::Vector2u tamanoVentana = ventana.getSize();
 
+        // Evitamos que el sprite se salga de los límites de la ventana
         if (sprite.getPosition().x < 0)
             sprite.setPosition(0, sprite.getPosition().y);
-        else if (sprite.getPosition().x + sprite.getGlobalBounds().width > tamanoVentana.x * 3) // Ajuste de nivel m�s largo
+        else if (sprite.getPosition().x + sprite.getGlobalBounds().width > tamanoVentana.x * 3) // Ajuste de nivel más largo
             sprite.setPosition(tamanoVentana.x * 3 - sprite.getGlobalBounds().width, sprite.getPosition().y);
 
         if (sprite.getPosition().y < 0)
@@ -182,45 +207,55 @@ public:
             sprite.setPosition(sprite.getPosition().x, tamanoVentana.y - sprite.getGlobalBounds().height);
     }
 
+    // Método para verificar colisiones con el jefe
     void verificarColisionesConJefe(Boss& jefe);
 };
 
+// Clase Enemigo que hereda de Personaje
 class Enemigo : public Personaje {
 protected:
-    float velocidad;
+    float velocidad; // Velocidad del enemigo
     float posicionInicialX;
     float posicionInicialY;
-    bool eliminado = false;
+    bool eliminado = false; // Indicador de si el enemigo ha sido eliminado
 
 public:
+    // Constructor de la clase Enemigo
     Enemigo(const std::string& rutaImagen, std::unique_ptr<Mecanicas> movimientos, bool movible, float posicionInicialX, float posicionInicialY, AdministradorDeTexturas& administradorDeTexturas, float velocidad)
         : Personaje(rutaImagen, std::move(movimientos), movible, administradorDeTexturas), velocidad(velocidad), posicionInicialX(posicionInicialX), posicionInicialY(posicionInicialY) {
         sprite.setPosition(posicionInicialX, posicionInicialY);
     }
 
+    // Método para marcar al enemigo como eliminado
     void marcarEliminado() {
         eliminado = true;
     }
 
+    // Método para verificar si el enemigo está eliminado
     bool estaEliminado() const {
         return eliminado;
     }
 
+    // Método virtual puro para mover al enemigo
     virtual void mover(float deltaTime) = 0;
 
+    // Método para establecer la escala del sprite del enemigo
     void setEscala(float escalaX, float escalaY) {
         sprite.setScale(escalaX, escalaY);
     }
 };
 
+// Clase EnemigoTerrestre que hereda de Enemigo
 class EnemigoTerrestre : public Enemigo {
 private:
-    bool moverDerecha = true;
+    bool moverDerecha = true; // Indicador de dirección de movimiento
 
 public:
+    // Constructor de la clase EnemigoTerrestre
     EnemigoTerrestre(const std::string& rutaImagen, std::unique_ptr<Mecanicas> movimientos, bool movible, float posicionInicialX, float posicionInicialY, AdministradorDeTexturas& administradorDeTexturas, float velocidad)
         : Enemigo(rutaImagen, std::move(movimientos), movible, posicionInicialX, posicionInicialY, administradorDeTexturas, velocidad) {}
 
+    // Método para mover al enemigo terrestre
     void mover(float deltaTime) override {
         if (moverDerecha) {
             sprite.move(velocidad * deltaTime, 0.f);
@@ -237,14 +272,17 @@ public:
     }
 };
 
+// Clase EnemigoSaltarin que hereda de Enemigo
 class EnemigoSaltarin : public Enemigo {
 private:
-    bool moverArriba = true;
+    bool moverArriba = true; // Indicador de dirección de movimiento vertical
 
 public:
+    // Constructor de la clase EnemigoSaltarin
     EnemigoSaltarin(const std::string& rutaImagen, std::unique_ptr<Mecanicas> movimientos, bool movible, float posicionInicialX, float posicionInicialY, AdministradorDeTexturas& administradorDeTexturas, float velocidad)
         : Enemigo(rutaImagen, std::move(movimientos), movible, posicionInicialX, posicionInicialY, administradorDeTexturas, velocidad) {}
 
+    // Método para mover al enemigo saltarín
     void mover(float deltaTime) override {
         if (moverArriba) {
             sprite.move(0.f, -velocidad * deltaTime);
@@ -261,15 +299,18 @@ public:
     }
 };
 
+// Clase EnemigoVolador que hereda de Enemigo
 class EnemigoVolador : public Enemigo {
 private:
     bool moverDerecha = true;
     bool moverArriba = true;
 
 public:
+    // Constructor de la clase EnemigoVolador
     EnemigoVolador(const std::string& rutaImagen, std::unique_ptr<Mecanicas> movimientos, bool movible, float posicionInicialX, float posicionInicialY, AdministradorDeTexturas& administradorDeTexturas, float velocidad)
         : Enemigo(rutaImagen, std::move(movimientos), movible, posicionInicialX, posicionInicialY, administradorDeTexturas, velocidad) {}
 
+    // Método para mover al enemigo volador
     void mover(float deltaTime) override {
         if (moverDerecha) {
             sprite.move(velocidad * deltaTime, 0.f);
@@ -299,6 +340,7 @@ public:
     }
 };
 
+// Clase Boss
 class Boss {
 private:
     sf::Clock clock;
@@ -317,6 +359,7 @@ private:
     sf::Sprite spriteperro;
 
 public:
+    // Constructor de la clase Boss
     Boss(const std::string& nombre, const std::string& rutaImagen, float posX, float posY, AdministradorDeTexturas& administradorDeTexturas, float limiteIzq, float limiteDer)
         : limiteEscalerasIzq(limiteIzq), limiteEscalerasDer(limiteDer), initialPosY(posY), rangoVision(300.0f), health(6), eliminado(false) {
         if (!administradorDeTexturas.cargarTextura(nombre, rutaImagen)) {
@@ -325,13 +368,14 @@ public:
         }
         spriteperro.setTexture(*administradorDeTexturas.obtenerTextura(nombre));
         spriteperro.setPosition(posX, posY);
-        spriteperro.setScale(0.7f, 0.7f); // Ajustar la escala del jefe para hacerlo m�s peque�o
+        spriteperro.setScale(0.7f, 0.7f); // Ajustar la escala del jefe para hacerlo más pequeño
         speed = 110.0f;
         attackPattern = 0;
         isImmobilized = false;
         health = 6;
     }
 
+    // Método para actualizar la posición del jefe
     void update(float deltaTime, sf::Vector2f playerPos) {
         if (isImmobilized) {
             if (immobilizedClock.getElapsedTime().asSeconds() > 3.0f) {
@@ -395,32 +439,38 @@ public:
         }
     }
 
+    // Método para dibujar al jefe en la ventana
     void draw(sf::RenderWindow& window) {
         window.draw(spriteperro);
     }
 
+    // Método para resetear la posición del jefe
     void reset() {
-        spriteperro.setPosition(2500.0f, 300.0f); // Reemplaza estos valores con la posici�n inicial adecuada
+        spriteperro.setPosition(2500.0f, 300.0f); // Reemplaza estos valores con la posición inicial adecuada
         health = 6;
         isImmobilized = false;
         attackPattern = 0;
     }
 
+    // Método para reducir la vida del jefe
     void perderVida() {
         health--;
     }
 
+    // Método para obtener la cantidad de vidas del jefe
     int getVidas() {
         return health;
     }
 
+    // Método para verificar si el jefe está eliminado
     bool estaEliminado() const {
         return health <= 0;
     }
 
+    // Método para manejar colisiones con el personaje
     void manejarColisiones(Personaje& personaje) {
         if (spriteperro.getGlobalBounds().intersects(personaje.sprite.getGlobalBounds())) {
-            // Colisi�n desde arriba
+            // Colisión desde arriba
             if (personaje.sprite.getPosition().y + personaje.sprite.getGlobalBounds().height <= spriteperro.getPosition().y + 10.f) {
                 personaje.mecanicas->saltar();
                 personaje.setEnElSuelo(false);
@@ -432,51 +482,56 @@ public:
                 }
             }
             else {
-                // Reiniciar la posici�n del personaje
-                personaje.sprite.setPosition(50.f, 316.f); // Ajustar la posici�n de reinicio de Pepe
-                // Reiniciar la posici�n del jefe y el patr�n de ataque
+                // Reiniciar la posición del personaje
+                personaje.sprite.setPosition(50.f, 316.f); // Ajustar la posición de reinicio de Pepe
+                // Reiniciar la posición del jefe y el patrón de ataque
                 reiniciarPosicion();
-                attackPattern = 0; // Reiniciar el patr�n de ataque
-                isImmobilized = false; // Reiniciar la inmovilizaci�n
-                immobilizedClock.restart(); // Reiniciar el reloj de inmovilizaci�n
+                attackPattern = 0; // Reiniciar el patrón de ataque
+                isImmobilized = false; // Reiniciar la inmovilización
+                immobilizedClock.restart(); // Reiniciar el reloj de inmovilización
             }
         }
     }
 
+    // Método para reiniciar la posición del jefe
     void reiniciarPosicion() {
-        spriteperro.setPosition(2500.0f, 300.0f); // Reemplaza estos valores con la posici�n inicial adecuada
+        spriteperro.setPosition(2500.0f, 300.0f); // Reemplaza estos valores con la posición inicial adecuada
     }
-
-
 };
 
+// Clase Bloque que hereda de Objeto
 class Bloque : public Objeto {
 public:
+    // Constructor de la clase Bloque
     Bloque(const std::string& rutaImagen, float x, float y, bool movible, AdministradorDeTexturas& administradorDeTexturas)
         : Objeto(rutaImagen, nullptr, movible, administradorDeTexturas) {
         sprite.setPosition(x, y);
         sprite.setScale(34.f / administradorDeTexturas.obtenerTextura(rutaImagen)->getSize().x, 34.f / administradorDeTexturas.obtenerTextura(rutaImagen)->getSize().y);
     }
 
-    Bloque(Bloque&&) = default; // Constructor de movimiento
-    Bloque& operator=(Bloque&&) = default; // Operador de asignaci�n por movimiento
+    // Constructor de movimiento
+    Bloque(Bloque&&) = default;
+    Bloque& operator=(Bloque&&) = default;
 
+    // Método para obtener los límites globales del bloque
     sf::FloatRect obtenerLimitesGlobales() {
         return sprite.getGlobalBounds();
     }
 };
 
-// Ivan: Clase PlataformaMovil para crear plataformas que se mueven lateralmente
+// Clase PlataformaMovil que hereda de Bloque
 class PlataformaMovil : public Bloque {
 private:
-    float velocidad;
+    float velocidad; // Velocidad de la plataforma
     bool moverDerecha = true;
     float limiteIzquierdo, limiteDerecho;
 
 public:
+    // Constructor de la clase PlataformaMovil
     PlataformaMovil(const std::string& rutaImagen, float x, float y, float velocidad, float limiteIzquierdo, float limiteDerecho, AdministradorDeTexturas& administradorDeTexturas)
         : Bloque(rutaImagen, x, y, false, administradorDeTexturas), velocidad(velocidad), limiteIzquierdo(limiteIzquierdo), limiteDerecho(limiteDerecho) {}
 
+    // Método para mover la plataforma
     void mover(float deltaTime) {
         if (moverDerecha) {
             sprite.move(velocidad * deltaTime, 0.f);
@@ -492,24 +547,26 @@ public:
         }
     }
 
+    // Método para obtener la velocidad de la plataforma
     sf::Vector2f obtenerVelocidad() const {
         return moverDerecha ? sf::Vector2f(velocidad, 0.f) : sf::Vector2f(-velocidad, 0.f);
     }
 };
 
-// Ivan: Clase Nivel con manejo de m�ltiples niveles
+// Clase Nivel que maneja múltiples niveles del juego
 class Nivel {
 private:
     sf::Texture texturaFondo;
     sf::Sprite spriteFondo;
     sf::RenderWindow& ventana;
-    std::vector<std::unique_ptr<Bloque>> bloques; // Cambiar a vector de unique_ptr
-    std::vector<std::unique_ptr<PlataformaMovil>> plataformasMoviles; // Vector para plataformas m�viles
+    std::vector<std::unique_ptr<Bloque>> bloques; // Vector de unique_ptr para los bloques
+    std::vector<std::unique_ptr<PlataformaMovil>> plataformasMoviles; // Vector para las plataformas móviles
     View& camara;
 
-    std::unique_ptr<Boss> jefeFinal; // Alex: Uso de unique_ptr para el jefe final
+    std::unique_ptr<Boss> jefeFinal; // Uso de unique_ptr para el jefe final
 
 public:
+    // Constructor de la clase Nivel
     Nivel(const std::string& rutaImagenFondo, sf::RenderWindow& ventana, View& camara, AdministradorDeTexturas& administradorDeTexturas)
         : ventana(ventana), camara(camara) {
 
@@ -523,40 +580,46 @@ public:
         sf::Vector2u tamanoTextura = texturaFondo.getSize();
         sf::Vector2u tamanoVentana = ventana.getSize();
 
-        float escalaX = static_cast<float>(tamanoVentana.x * 3) / tamanoTextura.x; // Ajuste de nivel m�s largo
+        float escalaX = static_cast<float>(tamanoVentana.x * 3) / tamanoTextura.x; // Ajuste de nivel más largo
         float escalaY = static_cast<float>(tamanoVentana.y) / tamanoTextura.y;
 
         float escala = std::max(escalaX, escalaY);
         spriteFondo.setScale(escala, escala);
 
-        // Alex: Inicializaci�n del jefe final
+        // Inicializamos el jefe final
         jefeFinal = std::make_unique<Boss>("Boss1", "C:/PepePepinillo/jefe.png", 2500.0f, 300.0f, administradorDeTexturas, 1900.0f, 2600.0f);
     }
 
+    // Método para dibujar el fondo
     void dibujarFondo(sf::RenderWindow& ventana) {
         ventana.draw(spriteFondo);
     }
 
+    // Método para dibujar los bloques
     void dibujarBloques(sf::RenderWindow& ventana) {
         for (auto& bloque : bloques) {
             bloque->dibujar(ventana);
         }
     }
 
+    // Método para dibujar las plataformas móviles
     void dibujarPlataformasMoviles(sf::RenderWindow& ventana) {
         for (auto& plataforma : plataformasMoviles) {
             plataforma->dibujar(ventana);
         }
     }
 
+    // Método para mover las plataformas móviles
     void moverPlataformasMoviles(float deltaTime) {
         for (auto& plataforma : plataformasMoviles) {
             plataforma->mover(deltaTime);
         }
     }
 
-    void dibujarJefeFinal(sf::RenderWindow& ventana); // Alex: M�todo para dibujar el jefe final
-    void moverJefeFinal(float deltaTime, sf::Vector2f posicionJugador); // Alex: M�todo para mover el jefe final
+    // Método para dibujar el jefe final
+    void dibujarJefeFinal(sf::RenderWindow& ventana);
+    // Método para mover el jefe final
+    void moverJefeFinal(float deltaTime, sf::Vector2f posicionJugador);
 
 
     std::vector<std::unique_ptr<Bloque>>& obtenerBloques() {
@@ -571,36 +634,34 @@ public:
         return jefeFinal;
     }
 
+    // Método para crear los bloques del nivel
     void crearBloques(AdministradorDeTexturas& administradorDeTexturas, int nivel, std::vector<std::unique_ptr<Enemigo>>& enemigos) {
-        bloques.clear();  // Limpiar bloques existentes
-        plataformasMoviles.clear(); // Limpiar plataformas m�viles existentes
-        enemigos.clear(); // Limpiar enemigos existentes
+        bloques.clear();  // Limpiamos bloques existentes
+        plataformasMoviles.clear(); // Limpiamos plataformas móviles existentes
+        enemigos.clear(); // Limpiamos enemigos existentes
 
-
+        // Creamos los bloques para el primer nivel
         switch (nivel) {
-            //Primer nivel
         case 1: {
-            // L�gica para crear los bloques del nivel 1
             float anchoBloque = 34.0f;
             float altoBloque = 34.0f;
             float alturaSuelo = 350.0f;
             int numBloques = static_cast<int>(ventana.getSize().x / anchoBloque) + 1;
 
-            //Bloques piso
-            for (int i = 0; i < numBloques * 3; ++i) { // Aumentar el n�mero de bloques 3 veces
+            // Creamos el piso
+            for (int i = 0; i < numBloques * 3; ++i) {
                 cout << "Cantidad de bloques: " << i << endl;
                 int contadorPiso = i;
 
-                //Agregar huecos
+                // Agregamos huecos en el piso
                 if (contadorPiso > 9 && contadorPiso < 12 || contadorPiso > 20 && contadorPiso < 23 || contadorPiso > 27 && contadorPiso < 30 || contadorPiso > 40 && contadorPiso < 50) {
                     continue;
-
                 }
                 float posXBloque = i * anchoBloque;
                 bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", posXBloque, alturaSuelo, false, administradorDeTexturas));
             }
 
-            //Agregar bloques flotantes
+            // Creamos bloques flotantes
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 250.0f, 280.0f, false, administradorDeTexturas));
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 318.0f, 212.0f, false, administradorDeTexturas));
 
@@ -612,7 +673,7 @@ public:
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 1300.f, 150.0f, false, administradorDeTexturas));
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 1843.f, 284.f, false, administradorDeTexturas));
 
-            //Tres bloques arriba de otro
+            // Creamos tres bloques apilados
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 1986.f, 318.f, false, administradorDeTexturas));
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 1986.f, 284.f, false, administradorDeTexturas));
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 1986.f, 250.f, false, administradorDeTexturas));
@@ -621,15 +682,11 @@ public:
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 2736.f, 284.f, false, administradorDeTexturas));
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 2736.f, 250.f, false, administradorDeTexturas));
 
-
-
-
-
+            // Creamos una escalera de bloques
             float posXEscalera = 680.0f;
             float posYEscalera = alturaSuelo + altoBloque;
             int numEscalones = 5;
 
-            //Agregar escaleras
             for (int i = 0; i < numEscalones; i++) {
                 bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", posXEscalera, posYEscalera, false, administradorDeTexturas));
                 posXEscalera += anchoBloque;
@@ -638,16 +695,14 @@ public:
 
             bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 986.0f, 212.0f, false, administradorDeTexturas));
 
-
-            // Agregar plataformas m�viles
+            // Agregamos plataformas móviles
             plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 1050.f, 150.f, 100.f, 1360.f, 1700.f, administradorDeTexturas));
-            //plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 800.f, 150.f, 120.f, 750.f, 850.f, administradorDeTexturas));
 
-            // Agregar enemigos
+            // Creamos los enemigos
             float posYEnemigo = alturaSuelo - 34.f;
             float velocidadEnemigos = 100.0f;
 
-            //Enemigos terrestres
+            // Enemigos terrestres
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 100.f, posYEnemigo, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 400.f, posYEnemigo, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 620.f, posYEnemigo, administradorDeTexturas, velocidadEnemigos));
@@ -660,12 +715,11 @@ public:
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 2311.f, posYEnemigo, administradorDeTexturas, velocidadEnemigos - 20));
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 2500.f, posYEnemigo, administradorDeTexturas, velocidadEnemigos + 30));
 
-            //Enemigos voladores
+            // Enemigos voladores
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 1200.f, 200.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 1530.f, 200.f, administradorDeTexturas, velocidadEnemigos));
-            //enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 400.f, 100.f, administradorDeTexturas, velocidadEnemigos));
 
-            //Enemigos saltarines
+            // Enemigos saltarines
             enemigos.push_back(std::make_unique<EnemigoSaltarin>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 660.f, 240.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.back()->setEscala(2.0f, 2.0f);
             enemigos.push_back(std::make_unique<EnemigoSaltarin>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 1050.f, 240.f, administradorDeTexturas, velocidadEnemigos));
@@ -673,38 +727,30 @@ public:
             enemigos.push_back(std::make_unique<EnemigoSaltarin>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 2650.f, 240.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.back()->setEscala(2.0f, 2.0f);
 
-            //Jefe final
+            // Creamos el jefe final
             jefeFinal = std::make_unique<Boss>("Boss1", "C:/PepePepinillo/jefe.png", 2500.0f, 300.0f, administradorDeTexturas, 2000.0f, 2600.0f);
 
             break;
         }
+              // Creamos los bloques para el segundo nivel
         case 2: {
-            // L�gica para crear los bloques del nivel 2 con muchos huecos grandes y m�s enemigos a�reos
             float anchoBloque = 34.0f;
             float altoBloque = 34.0f;
             float alturaSuelo = 350.0f;
             int numBloques = static_cast<int>(ventana.getSize().x / anchoBloque) + 1;
 
-            for (int i = 0; i < numBloques * 3; ++i) { // Aumentar el n�mero de bloques 3 veces
+            for (int i = 0; i < numBloques * 3; ++i) {
                 int contadorPiso = i;
 
-                //Agregar huecos
+                // Agregamos huecos más grandes en el piso
                 if (contadorPiso > 10 && contadorPiso < 20 || contadorPiso > 36 && contadorPiso < 90) {
                     continue;
-
                 }
                 float posXBloque = i * anchoBloque;
                 bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", posXBloque, alturaSuelo, false, administradorDeTexturas));
             }
 
-            //Para agregar bloques en el aire
-            //bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 150.0f, 250.0f, false, administradorDeTexturas));
-            //bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", 300.0f, 200.0f, false, administradorDeTexturas));
-
-
-            //Para crear piso en el aire
-
-
+            // Creamos plataformas flotantes
             float posXPlataforma = 400.0f;
             float posYPlataforma = 300.0f;
             int numPlataformas = 4;
@@ -723,13 +769,11 @@ public:
                 posXPlataforma += anchoBloque;
             }
 
-
-
+            // Creamos escaleras de bloques
             float posXEscalera = 1000.0f;
             float posYEscalera = alturaSuelo + altoBloque;
             int numEscalones = 5;
 
-            //Agregar escaleras
             for (int i = 0; i < numEscalones; i++) {
                 bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", posXEscalera, posYEscalera, false, administradorDeTexturas));
                 posXEscalera += anchoBloque;
@@ -740,16 +784,13 @@ public:
             posYEscalera = 180;
             numEscalones = 3;
 
-
             for (int i = 0; i < numEscalones; i++) {
                 bloques.push_back(std::make_unique<Bloque>("C:/PepePepinillo/pasto.png", posXEscalera, posYEscalera, false, administradorDeTexturas));
                 posXEscalera += anchoBloque;
                 posYEscalera -= altoBloque;
             }
 
-
-
-            // Ivan: Agregar plataformas m�viles al nivel 2
+            // Agregamos plataformas móviles
             plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 600.f, 250.f, 90.f, 550.f, 650.f, administradorDeTexturas));
             plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 1200.f, 200.f, 110.f, 1150.f, 1250.f, administradorDeTexturas));
             plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 1350.f, 200.f, 110.f, 1300.f, 1400.f, administradorDeTexturas));
@@ -758,10 +799,10 @@ public:
             plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 2800.f, 250.f, 150.f, 2700.f, 3000.f, administradorDeTexturas));
             plataformasMoviles.push_back(std::make_unique<PlataformaMovil>("C:/PepePepinillo/plataforma.png", 3200.f, 250.f, 110.f, 3100.f, 3300.f, administradorDeTexturas));
 
+            // Creamos enemigos voladores
             float posYEnemigo = alturaSuelo - 34.f;
             float velocidadEnemigos = 100.0f;
 
-            //Enemigos voladores
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 200.f, 200.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 600.f, 150.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 1000.f, 100.f, administradorDeTexturas, velocidadEnemigos));
@@ -771,17 +812,16 @@ public:
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 2850.f, 150.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoVolador>("C:/PepePepinillo/maloVolador.png", std::make_unique<Mecanicas>(980.0f), true, 3000.f, 100.f, administradorDeTexturas, velocidadEnemigos));
 
-            //Enemigos terrestres
+            // Creamos enemigos terrestres
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 100.f, posYEnemigo, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 400.f, posYEnemigo - 64, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 2005.f, 145, administradorDeTexturas, velocidadEnemigos));
             enemigos.push_back(std::make_unique<EnemigoTerrestre>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 2105.f, 145, administradorDeTexturas, velocidadEnemigos + 25));
-            //Enemigos saltarines
+            // Creamos enemigos saltarines
             enemigos.push_back(std::make_unique<EnemigoSaltarin>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 900.f, 240.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.back()->setEscala(2.0f, 2.0f);
             enemigos.push_back(std::make_unique<EnemigoSaltarin>("C:/PepePepinillo/malo.png", std::make_unique<Mecanicas>(980.0f), true, 3120.f, 240.f, administradorDeTexturas, velocidadEnemigos));
             enemigos.back()->setEscala(2.0f, 2.0f);
-
 
             break;
         }
@@ -791,7 +831,7 @@ public:
     }
 };
 
-// Ivan: Clase Juego para gestionar el juego
+// Clase Juego que gestiona el juego
 class Juego {
 private:
     View camara;
@@ -809,6 +849,7 @@ public:
     Juego();
     sf::RenderWindow ventana;
 
+    // Método para alternar entre pantalla completa y ventana
     void alternarPantallaCompleta() {
         pantallaCompleta = !pantallaCompleta;
         ventana.close();
@@ -824,6 +865,7 @@ public:
         ventana.setVerticalSyncEnabled(true);
     }
 
+    // Método principal para ejecutar el juego
     void ejecutar() {
         RenderWindow ventana(VideoMode(1200, 720), "Juego");
         Menu menu(1200, 720, "C:/PepePepinillo/fuente/Sign Rover Layered.ttf");
@@ -885,18 +927,20 @@ public:
         }
     }
 
+    // Método para iniciar el juego
     void iniciarJuego() {
-        iniciarNivel(1);  // Comenzar con el nivel 1
+        iniciarNivel(1);  // Comenzamos con el nivel 1
     }
 
+    // Método para iniciar un nivel específico
     void iniciarNivel(int nivel) {
         bool enPausa = false;
         Nivel nivelJuego("C:/PepePepinillo/fondo.png", ventana, camara, administradorDeTexturas);
         nivelJuego.crearBloques(administradorDeTexturas, nivel, enemigos);
 
-        auto mecanicasPepe = std::make_unique<Mecanicas>(980.0f); // Establecer gravedad correctamente
+        auto mecanicasPepe = std::make_unique<Mecanicas>(980.0f); // Establecemos la gravedad correctamente
         Personaje pepe("C:/PepePepinillo/pepe.png", std::move(mecanicasPepe), true, administradorDeTexturas);
-        pepe.sprite.setPosition(50.f, 316.f); // Ajustar la posici�n inicial de Pepe
+        pepe.sprite.setPosition(50.f, 316.f); // Ajustamos la posición inicial de Pepe
 
         while (ventana.isOpen()) {
             sf::Event evento;
@@ -910,9 +954,9 @@ public:
                     alternarPantallaCompleta();
                 }
                 if (evento.key.code == Keyboard::N && evento.type == Event::KeyPressed) {
-                    nivelActual = (nivelActual % 2) + 1;  // Cambiar de nivel
+                    nivelActual = (nivelActual % 2) + 1;  // Cambiamos de nivel
                     iniciarNivel(nivelActual);
-                    return;  // Salir del bucle y reiniciar el nivel
+                    return;  // Salimos del bucle y reiniciamos el nivel
                 }
             }
 
@@ -920,7 +964,7 @@ public:
 
             Vector2f pepePosicion = pepe.sprite.getPosition();
             float limiteDerechoCamara = pepePosicion.x > 300.f ? pepePosicion.x : 300.f;
-            float limiteIzquierdoCamara = 3 * ventana.getSize().x - camara.getSize().x / 2; // Ajuste de nivel m�s largo
+            float limiteIzquierdoCamara = 3 * ventana.getSize().x - camara.getSize().x / 2; // Ajuste de nivel más largo
 
             if (limiteDerechoCamara < limiteIzquierdoCamara) {
                 camara.setCenter(limiteDerechoCamara, camara.getCenter().y);
@@ -930,15 +974,15 @@ public:
             }
 
             if (pepePosicion.y > 350) {
-                pepe.sprite.setPosition(50.f, 316.f); // Ajustar la posici�n de reinicio de Pepe
+                pepe.sprite.setPosition(50.f, 316.f); // Ajustamos la posición de reinicio de Pepe
                 camara.setCenter(300, camara.getCenter().y);
             }
 
-            // Cambiar de nivel cuando Pepe llega al borde derecho de la ventana
-            if (pepePosicion.x + pepe.sprite.getGlobalBounds().width >= 3 * ventana.getSize().x) { // Ajuste de nivel m�s largo
+            // Cambiamos de nivel cuando Pepe llega al borde derecho de la ventana
+            if (pepePosicion.x + pepe.sprite.getGlobalBounds().width >= 3 * ventana.getSize().x) { // Ajuste de nivel más largo
                 nivelActual++;
                 iniciarNivel(nivelActual);
-                return; // Salir del bucle y reiniciar el nivel
+                return; // Salimos del bucle y reiniciamos el nivel
             }
 
             actualizarPosicionTextoPuntaje();
@@ -948,15 +992,15 @@ public:
 
             nivelJuego.dibujarFondo(ventana);
             nivelJuego.dibujarBloques(ventana);
-            nivelJuego.dibujarPlataformasMoviles(ventana); // Dibujar plataformas m�viles
+            nivelJuego.dibujarPlataformasMoviles(ventana); // Dibujamos las plataformas móviles
 
-            nivelJuego.moverPlataformasMoviles(deltaTime); // Mover plataformas m�viles
+            nivelJuego.moverPlataformasMoviles(deltaTime); // Movemos las plataformas móviles
 
-            // Mover y dibujar el jefe final
+            // Movemos y dibujamos el jefe final
             nivelJuego.moverJefeFinal(deltaTime, pepe.sprite.getPosition());
             nivelJuego.dibujarJefeFinal(ventana);
 
-            // Verificar colisiones con el jefe
+            // Verificamos colisiones con el jefe
             pepe.verificarColisionesConJefe(*nivelJuego.obtenerJefeFinal());
 
             pepe.ejecutarMovimiento(ventana, deltaTime);
@@ -977,10 +1021,10 @@ public:
                         puntaje += 1000;
                         actualizarPuntaje();
                         pepe.mecanicas->saltar();
-                        pepe.setEnElSuelo(false); // Asegurarse de que Pepe pueda seguir saltando despu�s de eliminar un enemigo
+                        pepe.setEnElSuelo(false); // Nos aseguramos de que Pepe pueda seguir saltando después de eliminar un enemigo
                     }
                     else {
-                        pepe.sprite.setPosition(50.f, 316.f); // Ajustar la posici�n de reinicio de Pepe
+                        pepe.sprite.setPosition(50.f, 316.f); // Ajustamos la posición de reinicio de Pepe
                         camara.setCenter(300, camara.getCenter().y);
                     }
                 }
@@ -998,13 +1042,14 @@ public:
 
             verificarColisiones(nivelJuego.obtenerBloques(), nivelJuego.obtenerPlataformasMoviles(), pepe, deltaTime);
 
-            // Dibujar el puntaje
+            // Dibujamos el puntaje
             ventana.draw(textoPuntaje);
 
             ventana.display();
         }
     }
 
+    // Método para verificar colisiones
     void verificarColisiones(std::vector<std::unique_ptr<Bloque>>& bloques, std::vector<std::unique_ptr<PlataformaMovil>>& plataformasMoviles, Personaje& pepe, float deltaTime) {
         bool enElSuelo = false;
         bool debajoDeBloque = false;
@@ -1073,7 +1118,7 @@ public:
             }
         }
 
-        // Permitir movimiento lateral del personaje sobre la plataforma m�vil
+        // Permitimos el movimiento lateral del personaje sobre la plataforma móvil
         if (sobrePlataforma && !sf::Keyboard::isKeyPressed(sf::Keyboard::A) && !sf::Keyboard::isKeyPressed(sf::Keyboard::D) &&
             !sf::Keyboard::isKeyPressed(sf::Keyboard::Left) && !sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) {
             pepe.sprite.move(velocidadPlataforma * deltaTime);
@@ -1086,24 +1131,28 @@ public:
         pepe.mecanicas->debajoDeBloque = debajoDeBloque;
     }
 
+    // Método para cargar texturas
     void cargarTexturas() {
         administradorDeTexturas.cargarTextura("C:/PepePepinillo/pepe.png", "C:/PepePepinillo/pepe.png");
         administradorDeTexturas.cargarTextura("C:/PepePepinillo/malo.png", "C:/PepePepinillo/malo.png");
         administradorDeTexturas.cargarTextura("C:/PepePepinillo/maloVolador.png", "C:/PepePepinillo/maloVolador.png");
         administradorDeTexturas.cargarTextura("C:/PepePepinillo/pasto.png", "C:/PepePepinillo/pasto.png");
         administradorDeTexturas.cargarTextura("C:/PepePepinillo/fondo.png", "C:/PepePepinillo/fondo.png");
-        administradorDeTexturas.cargarTextura("C:/PepePepinillo/plataforma.png", "C:/PepePepinillo/plataforma.png"); // Cargar textura de la plataforma m�vil
+        administradorDeTexturas.cargarTextura("C:/PepePepinillo/plataforma.png", "C:/PepePepinillo/plataforma.png"); // Cargamos textura de la plataforma móvil
     }
 
+    // Método para actualizar el puntaje
     void actualizarPuntaje() {
         textoPuntaje.setString("Score: " + std::to_string(puntaje));
     }
 
+    // Método para actualizar la posición del texto de puntaje
     void actualizarPosicionTextoPuntaje() {
         textoPuntaje.setPosition(camara.getCenter().x - camara.getSize().x / 2 + 10, camara.getCenter().y - camara.getSize().y / 2 + 10);
     }
 };
 
+// Constructor de la clase Juego
 Juego::Juego() : ventana(VideoMode(1200, 720), "Pepe el pepinillo", Style::Default),
 camara(Vector2f(300.f, 185.f), Vector2f(600.f, 367.f)),
 puntaje(0), enemigosDerrotados(0), vecesMuerto(0) {
@@ -1113,7 +1162,7 @@ puntaje(0), enemigosDerrotados(0), vecesMuerto(0) {
     ventana.setFramerateLimit(60);
     ventana.setVerticalSyncEnabled(true);
 
-    // Cargar la fuente y configurar el texto de puntaje
+    // Cargamos la fuente y configuramos el texto de puntaje
     fuentePuntaje.loadFromFile("C:/PepePepinillo/fuente/Sign Rover Layered.ttf");
     textoPuntaje.setFont(fuentePuntaje);
     textoPuntaje.setCharacterSize(30);
@@ -1128,20 +1177,21 @@ int main() {
     return 0;
 }
 
-// Alex: Definici�n del m�todo para dibujar el jefe final
+// Definimos el método para dibujar el jefe final
 void Nivel::dibujarJefeFinal(sf::RenderWindow& ventana) {
     if (jefeFinal) {
         jefeFinal->draw(ventana);
     }
 }
 
-// Alex: Definici�n del m�todo para mover el jefe final
+// Definimos el método para mover el jefe final
 void Nivel::moverJefeFinal(float deltaTime, sf::Vector2f posicionJugador) {
     if (jefeFinal) {
         jefeFinal->update(deltaTime, posicionJugador);
     }
 }
 
+// Definimos el método para verificar colisiones con el jefe
 void Personaje::verificarColisionesConJefe(Boss& jefe) {
     jefe.manejarColisiones(*this);
 }
