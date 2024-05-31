@@ -896,9 +896,7 @@ public:
                                 }
                                 if (menu.obtenerSeleccionado() == 2) {
                                     numPagina = 2;
-                                }
-                                if (menu.obtenerSeleccionado() == 3) {
-                                    numPagina = -1;
+                                    std::exit(0); // Termina la ejecución del programa completamente
                                 }
                             }
                         }
